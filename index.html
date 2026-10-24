@@ -417,7 +417,7 @@ let BIZ = PRESETS.barber;
 let bookings = [];
 let missed = 2;
 let logLines = [];
-const state = { step:'idle', service:null, day:null, time:null, kind:null, party:null, guests:null, pkg:null };
+const state = { step:'idle', service:null, day:null, time:null, kind:null, party:null, guests:null, pkg:null, adv:null, advPkg:null };
 
 function resetDemo(cfgOrKey){
   const cfg = typeof cfgOrKey === 'string' ? PRESETS[cfgOrKey] : cfgOrKey;
@@ -432,6 +432,7 @@ function resetDemo(cfgOrKey){
   ];
   state.step = 'idle'; state.service = null; state.day = null; state.time = null;
   state.kind = null; state.party = null; state.guests = null; state.pkg = null;
+  state.adv = null; state.advPkg = null;
   $('bizNameTag').textContent = cfg.name.toUpperCase();
   chatLog.innerHTML = '';
   renderDash();
@@ -506,6 +507,7 @@ function mainMenu(){
       { label:'Book a table', onPick:()=> askParty() },
       { label:'Order takeout', onPick:()=> askMenuItem() },
       { label:'Catering', onPick:()=> askGuests() },
+      { label:'Help me decide', onPick:()=> askAdvOccasion() },
       { label:'Menu', onPick:()=> showMenu() },
       { label:'Hours', onPick:()=> showHours() },
       { label:'Location', onPick:()=> showLocation() }
@@ -660,6 +662,74 @@ function showMenu(){
   ]));
 }
 
+/* ---------- "Help me decide" advisor: the AI recommends ---------- */
+function askAdvOccasion(){
+  state.step = 'adv';
+  aiSay('I got you — let me help you figure it out. What’s the occasion?', ()=> setChips(
+    ['Work lunch','Birthday party','Family gathering','Just because'].map(o=> ({ label: o, onPick:()=> pickAdvOccasion(o) }))
+  ));
+}
+function pickAdvOccasion(o){
+  state.adv = state.adv || {};
+  state.adv.occasion = o;
+  if(state.adv.guests) return askAdvBudget();
+  aiSay(o + ' — nice. How many guests are we feeding?', ()=> setChips(
+    [10, 25, 40, 50, 75].map(n=> ({ label: (n === 75 ? '75+' : n) + ' guests', onPick:()=> pickAdvGuests(n) }))
+  ));
+}
+function pickAdvGuests(n){
+  state.adv = state.adv || {};
+  state.adv.guests = n;
+  askAdvBudget();
+}
+function askAdvBudget(){
+  aiSay('Last one — what’s the budget per person?', ()=> setChips(
+    [{ label:'~$20', v:20 }, { label:'~$35', v:35 }, { label:'~$65', v:65 }, { label:'No budget in mind', v:0 }].map(b=> ({ label: b.label, onPick:()=> pickAdvBudget(b.v) }))
+  ));
+}
+function pickAdvBudget(v){
+  state.adv.budget = v;
+  recommend();
+}
+function recommend(){
+  const a = state.adv;
+  let pkg;
+  if(a.budget === 20) pkg = BIZ.catering[0];
+  else if(a.budget === 35) pkg = BIZ.catering[1];
+  else if(a.budget === 65) pkg = BIZ.catering[2];
+  else if(a.guests <= 25) pkg = BIZ.catering[0];
+  else if(a.guests <= 50) pkg = BIZ.catering[1];
+  else pkg = BIZ.catering[2];
+  state.advPkg = pkg;
+  const total = a.guests * pkg.price;
+  const why = pkg.name === 'Taco Bar' ? 'easy, casual, and everyone builds their own'
+    : pkg.name === 'BBQ Buffet' ? 'easy to serve a crowd, and you can add a veg tray for the non-meat eaters'
+    : 'plated service — the move when you want it to feel like a real occasion';
+  aiSay('For ' + a.occasion.toLowerCase() + ' with ' + a.guests + ' guests, I’d go ' + pkg.name + ' — $' + pkg.price + ' a head, about $' + total + ' total. It’s ' + why + '. Want me to hold the date?', ()=> setChips([
+    { label:'Hold that date', onPick:()=> holdAdvisor() },
+    { label:'See other options', onPick:()=> showAdvOptions() },
+    { label:'Start over', onPick:()=> mainMenu() }
+  ]));
+}
+function showAdvOptions(){
+  aiSay('Here’s the full lineup — ' + BIZ.catering.map(p=> p.name + ' $' + p.price + '/person').join(' · ') + '. Tap one and we’ll hold it:', ()=> setChips(
+    BIZ.catering.map(p=> ({ label: p.name + ' · $' + p.price + '/person', onPick:()=> holdPackage(p) }))
+  ));
+}
+function holdPackage(p){
+  const a = state.adv;
+  let guests = a.guests;
+  if(guests < p.min) guests = p.min;
+  state.kind = 'catering';
+  state.service = { name:'Catering · ' + guests + ' guests · ' + p.name, price: guests * p.price, mins: 0 };
+  aiSay(p.name + ' for ' + guests + ' guests — about $' + (guests * p.price) + '. What day’s the event?', ()=> setChips(
+    DAYS.map(d=> ({ label: d, onPick:()=> pickDay(d) }))
+  ));
+}
+function holdAdvisor(){
+  holdPackage(state.advPkg);
+}
+
 /* ---------- free-text understanding ---------- */
 function matchService(txt){
   /* generic word-stem match against whatever services this business offers */
@@ -714,6 +784,15 @@ function handleText(raw){
   }
   /* restaurant intents */
   if(BIZ.kind === 'restaurant'){
+    const feed = txt.match(/feed\s+(\d+)/);
+    if(feed){
+      state.adv = { guests: +feed[1] };
+      aiSay(feed[1] + ' people — love it. What’s the occasion?', ()=> setChips(
+        ['Work lunch','Birthday party','Family gathering','Just because'].map(o=> ({ label: o, onPick:()=> pickAdvOccasion(o) }))
+      ));
+      return;
+    }
+    if(/help me decide|not sure|don't know|dont know|recommend|what do you think|what should/.test(txt)) return askAdvOccasion();
     if(/cater/.test(txt)) return askGuests();
     if(/takeout|take out|takeaway|pickup|pick up|delivery/.test(txt)) return askMenuItem();
     if(/table|reserv/.test(txt)) return askParty();

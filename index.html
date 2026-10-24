@@ -66,6 +66,13 @@
   .msg.me{background:var(--mint);color:#04120c;font-weight:600;align-self:flex-end;border-bottom-right-radius:5px}
   .msg.sys{align-self:center;background:transparent;color:var(--faint);font-family:'JetBrains Mono',monospace;font-size:9.5px;letter-spacing:.1em;text-align:center}
   .msg.typing{background:#1b1f20;align-self:flex-start;color:var(--dim);letter-spacing:.2em}
+  .msg.pay{background:#101314;border:1px solid rgba(46,230,168,.5);align-self:flex-start;border-bottom-left-radius:5px}
+  .payTop{font-family:'JetBrains Mono',monospace;font-size:9.5px;letter-spacing:.14em;color:var(--mint)}
+  .payBiz{font-weight:800;margin:6px 0 2px}
+  .payDesc{font-size:12.5px;color:var(--dim)}
+  .payBtn{margin-top:10px;background:var(--mint);color:#04120c;border:none;font-weight:800;font-size:13px;padding:10px 16px;border-radius:999px;cursor:pointer;font-family:'Archivo',sans-serif}
+  .payBtn:disabled{opacity:.6}
+  .paid{font-family:'JetBrains Mono',monospace;font-size:9px;color:#04120c;background:var(--mint);padding:3px 8px;border-radius:999px;font-weight:800;white-space:nowrap}
   #chipRow{display:flex;gap:7px;flex-wrap:wrap;padding:10px 14px 4px}
   .chip{border:1px solid rgba(46,230,168,.45);color:var(--mint);background:var(--mint-dim);font-family:'Archivo',sans-serif;font-size:12px;font-weight:700;padding:8px 14px;border-radius:999px;cursor:pointer}
   .chip:disabled{opacity:.4}
@@ -446,6 +453,7 @@ function renderDash(freshIdx){
   $('dashList').innerHTML = bookings.map((b, i)=>
     '<div class="bk' + (freshIdx === i ? ' fresh' : '') + '"><span class="tm">' + b.time + '</span>' +
     '<div class="who"><b></b><span>' + b.svc + ' · ' + b.day + '</span></div>' +
+    (b.paid ? '<span class="paid">✓ PAID</span>' : '') +
     '<span class="pr">$' + b.price + '</span></div>').join('');
   bookings.forEach((b, i)=>{
     const el = $('dashList').children[i] && $('dashList').children[i].querySelector('b');
@@ -592,10 +600,57 @@ function confirmBooking(name){
   }
   addLog(log);
   state.step = 'idle';
-  aiSay(msg, ()=> setChips([
+  const doneChips = ()=> setChips([
     { label:'Book another', onPick:()=> BIZ.kind === 'restaurant' ? mainMenu() : askService() },
     { label:'That’s all', onPick:()=> aiSay('Sounds good — see you soon. ✌️', ()=> mainMenu()) }
-  ]));
+  ]);
+  if(s.price > 0){
+    const dep = state.kind === 'catering' ? Math.round(s.price * 0.25) : s.price;
+    const payLabel = state.kind === 'catering' ? 'Pay $' + dep + ' deposit' : 'Pay $' + s.price + ' now';
+    aiSay(msg, ()=> setChips([
+      { label: payLabel, onPick:()=> payLink() },
+      { label:'Pay later', onPick:()=> doneChips() }
+    ]));
+  } else {
+    aiSay(msg, ()=> doneChips());
+  }
+}
+
+/* ---------- secure payment link: book → link → paid ---------- */
+function payLink(){
+  const b = bookings[bookings.length - 1];
+  const isDep = state.kind === 'catering';
+  const amt = isDep ? Math.round(b.price * 0.25) : b.price;
+  const desc = isDep ? 'Deposit · $' + amt + ' of $' + b.price + ' estimated total' : 'Total · $' + amt;
+  aiSay('Link sent to your phone ✓ — it looks like this:', ()=>{
+    const d = document.createElement('div');
+    d.className = 'msg pay';
+    d.innerHTML = '<div class="payTop">🔒 SECURE CHECKOUT · KEPT PAY</div>' +
+      '<div class="payBiz">' + BIZ.name + '</div>' +
+      '<div class="payDesc">' + desc + '</div>' +
+      '<button class="payBtn">Pay $' + amt + '</button>';
+    chatLog.appendChild(d);
+    chatLog.scrollTop = chatLog.scrollHeight;
+    clearChips();
+    d.querySelector('.payBtn').addEventListener('click', ()=>{
+      const btn = d.querySelector('.payBtn');
+      btn.disabled = true;
+      btn.textContent = 'Processing…';
+      setTimeout(()=>{
+        b.paid = true;
+        renderDash();
+        addLog('Payment received → ' + b.name + ', $' + amt + ' via secure link · ' + (isDep ? 'deposit' : 'booking') + ' confirmed');
+        d.innerHTML = '<div class="payTop">✓ PAYMENT RECEIVED</div>' +
+          '<div class="payBiz">$' + amt + ' · Card •• 4242</div>' +
+          '<div class="payDesc">' + (isDep ? 'Deposit paid — date held. Balance due at event.' : 'Paid in full — see you then.') + '</div>';
+        chatLog.scrollTop = chatLog.scrollHeight;
+        aiSay('Payment received ✓ You’re all set — confirmation text on its way.', ()=> setChips([
+          { label:'Book another', onPick:()=> BIZ.kind === 'restaurant' ? mainMenu() : askService() },
+          { label:'That’s all', onPick:()=> aiSay('Sounds good — see you soon. ✌️', ()=> mainMenu()) }
+        ]));
+      }, 900);
+    });
+  });
 }
 
 /* ---------- restaurant flows: tables, takeout, catering ---------- */

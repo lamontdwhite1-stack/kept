@@ -1,0 +1,707 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#050607">
+<title>KEPT — The AI Front Desk for Local Shops</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap');
+  :root{
+    --mint:#2ee6a8; --mint-dim:rgba(46,230,168,.14);
+    --ink:#f2f4f1; --dim:rgba(242,244,241,.6); --faint:rgba(242,244,241,.32);
+    --panel:#0c0e0f; --panel2:#101314; --line:rgba(255,255,255,.09);
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;margin:0;padding:0}
+  html{scroll-behavior:smooth}
+  body{background:#050607;color:var(--ink);font-family:'Archivo',sans-serif;line-height:1.5}
+  .mono{font-family:'JetBrains Mono',monospace}
+  .wrap{max-width:1120px;margin:0 auto;padding:0 20px}
+  a{color:inherit}
+
+  /* nav */
+  nav{position:sticky;top:0;z-index:50;background:rgba(5,6,7,.85);backdrop-filter:blur(14px);border-bottom:1px solid var(--line)}
+  nav .wrap{display:flex;align-items:center;justify-content:space-between;height:62px}
+  .logo{font-weight:900;font-size:21px;letter-spacing:.14em}
+  .logo em{font-style:normal;color:var(--mint)}
+  nav .links{display:flex;gap:26px;font-size:13px;font-weight:600;color:var(--dim)}
+  nav .links a{text-decoration:none}
+  nav .links a:hover{color:var(--ink)}
+  .cta{background:var(--mint);color:#04120c;border:none;font-family:'Archivo',sans-serif;font-weight:800;font-size:12.5px;letter-spacing:.06em;padding:11px 20px;border-radius:999px;cursor:pointer;text-decoration:none;display:inline-block}
+  @media(max-width:640px){ nav .links{display:none} }
+
+  /* hero */
+  .hero{padding:74px 0 30px;text-align:center}
+  .kicker{font-family:'JetBrains Mono',monospace;font-size:10.5px;letter-spacing:.28em;color:var(--mint);margin-bottom:18px}
+  .hero h1{font-size:clamp(38px,7vw,68px);font-weight:900;line-height:1.04;letter-spacing:-.01em}
+  .hero h1 .u{color:var(--mint)}
+  .hero p{max-width:640px;margin:22px auto 0;font-size:17px;color:var(--dim);line-height:1.65}
+  .hero .ctas{margin-top:32px;display:flex;gap:12px;justify-content:center;flex-wrap:wrap}
+  .cta.ghost{background:transparent;color:var(--ink);border:1px solid var(--line)}
+  .stats{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-top:38px}
+  .stat{border:1px solid var(--line);background:var(--panel);border-radius:14px;padding:13px 20px;text-align:left}
+  .stat b{display:block;font-size:19px;font-weight:800}
+  .stat span{font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:.14em;color:var(--faint)}
+
+  /* demo */
+  .demoSec{padding:56px 0 10px}
+  .secHead{text-align:center;margin-bottom:30px}
+  .secHead h2{font-size:clamp(26px,4.5vw,38px);font-weight:800}
+  .secHead p{color:var(--dim);margin-top:8px;font-size:15px}
+  .demoGrid{display:grid;grid-template-columns:1fr 1fr;gap:18px;align-items:start}
+  @media(max-width:860px){ .demoGrid{grid-template-columns:1fr} }
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:22px;overflow:hidden}
+  .cardHead{display:flex;align-items:center;justify-content:space-between;padding:14px 18px;border-bottom:1px solid var(--line);background:var(--panel2)}
+  .cardHead b{font-size:12px;letter-spacing:.18em;font-weight:800}
+  .cardHead span{font-family:'JetBrains Mono',monospace;font-size:9.5px;color:var(--faint);letter-spacing:.1em}
+  .liveDot{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--mint);margin-right:6px;animation:pulse 1.6s infinite;vertical-align:1px}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+
+  /* phone chat */
+  .phoneBody{height:480px;display:flex;flex-direction:column}
+  #chatLog{flex:1;overflow-y:auto;padding:16px 14px;display:flex;flex-direction:column;gap:9px}
+  .msg{max-width:82%;padding:10px 14px;border-radius:17px;font-size:13.5px;line-height:1.5;animation:vin .25s ease}
+  @keyframes vin{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:none}}
+  .msg.ai{background:#1b1f20;align-self:flex-start;border-bottom-left-radius:5px}
+  .msg.me{background:var(--mint);color:#04120c;font-weight:600;align-self:flex-end;border-bottom-right-radius:5px}
+  .msg.sys{align-self:center;background:transparent;color:var(--faint);font-family:'JetBrains Mono',monospace;font-size:9.5px;letter-spacing:.1em;text-align:center}
+  .msg.typing{background:#1b1f20;align-self:flex-start;color:var(--dim);letter-spacing:.2em}
+  #chipRow{display:flex;gap:7px;flex-wrap:wrap;padding:10px 14px 4px}
+  .chip{border:1px solid rgba(46,230,168,.45);color:var(--mint);background:var(--mint-dim);font-family:'Archivo',sans-serif;font-size:12px;font-weight:700;padding:8px 14px;border-radius:999px;cursor:pointer}
+  .chip:disabled{opacity:.4}
+  .chatInput{display:flex;gap:8px;padding:10px 12px 14px}
+  #chatText{flex:1;background:rgba(255,255,255,.06);border:1px solid var(--line);border-radius:999px;color:var(--ink);font-size:13.5px;padding:11px 16px;outline:none;font-family:'Archivo',sans-serif}
+  #chatSend{background:var(--mint);color:#04120c;border:none;width:42px;height:42px;border-radius:50%;font-size:16px;cursor:pointer;flex-shrink:0}
+
+  /* dashboard */
+  .dashNums{display:grid;grid-template-columns:1fr 1fr 1fr;border-bottom:1px solid var(--line)}
+  .dashNums div{padding:16px 14px;text-align:center}
+  .dashNums div + div{border-left:1px solid var(--line)}
+  .dashNums b{display:block;font-size:24px;font-weight:800;color:var(--mint)}
+  .dashNums span{font-family:'JetBrains Mono',monospace;font-size:8.5px;letter-spacing:.13em;color:var(--faint)}
+  .dashList{padding:8px 10px;max-height:300px;overflow-y:auto}
+  .bk{display:flex;align-items:center;gap:12px;padding:11px 10px;border-radius:13px}
+  .bk + .bk{border-top:1px solid rgba(255,255,255,.05)}
+  .bk .tm{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--mint);min-width:66px}
+  .bk .who{flex:1;min-width:0}
+  .bk .who b{display:block;font-size:13.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .bk .who span{font-size:11px;color:var(--dim)}
+  .bk .pr{font-weight:800;font-size:13.5px}
+  .bk.fresh{animation:vin .4s ease;background:var(--mint-dim)}
+  .dashLog{border-top:1px solid var(--line);padding:12px 18px;font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--dim);line-height:2;max-height:118px;overflow-y:auto}
+  .dashLog .t{color:var(--faint)}
+
+  /* generic sections */
+  .steps{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;padding:14px 0 8px}
+  @media(max-width:860px){ .steps{grid-template-columns:1fr} }
+  .step{background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:24px}
+  .step .n{font-family:'JetBrains Mono',monospace;color:var(--mint);font-size:11px;letter-spacing:.2em}
+  .step h3{font-size:17px;font-weight:800;margin:10px 0 7px}
+  .step p{font-size:13.5px;color:var(--dim);line-height:1.65}
+  .prices{display:grid;grid-template-columns:1fr 1fr;gap:16px;padding:14px 0 8px}
+  @media(max-width:860px){ .prices{grid-template-columns:1fr} }
+  .price{background:var(--panel);border:1px solid var(--line);border-radius:20px;padding:28px}
+  .price.hot{border-color:rgba(46,230,168,.5);background:linear-gradient(180deg,rgba(46,230,168,.06),var(--panel))}
+  .price .tag{font-family:'JetBrains Mono',monospace;font-size:9.5px;letter-spacing:.2em;color:var(--mint)}
+  .price .amt{font-size:42px;font-weight:900;margin:8px 0 2px}
+  .price .amt span{font-size:15px;color:var(--dim);font-weight:600}
+  .price ul{list-style:none;margin-top:16px;font-size:13.5px;color:var(--dim);line-height:2.05}
+  .price ul li::before{content:"✓ ";color:var(--mint);font-weight:800}
+  .faq{max-width:760px;margin:0 auto;padding:10px 0}
+  .faq div{border-bottom:1px solid var(--line);padding:18px 4px}
+  .faq b{font-size:15px}
+  .faq p{font-size:13.5px;color:var(--dim);margin-top:5px;line-height:1.65}
+  .band{margin:56px 0 0;background:linear-gradient(120deg,rgba(46,230,168,.16),rgba(46,230,168,.03));border:1px solid rgba(46,230,168,.35);border-radius:24px;padding:40px 30px;text-align:center}
+  .band h2{font-size:clamp(24px,4vw,34px);font-weight:900}
+  .band p{color:var(--dim);margin:10px auto 22px;max-width:520px;font-size:14.5px}
+  #claimForm{display:flex;gap:9px;justify-content:center;flex-wrap:wrap}
+  #claimForm input{background:rgba(0,0,0,.4);border:1px solid var(--line);border-radius:12px;color:var(--ink);font-size:14px;padding:13px 15px;outline:none;font-family:'Archivo',sans-serif;min-width:180px}
+  footer{padding:34px 0 44px;text-align:center;color:var(--faint);font-size:11.5px;line-height:2}
+  #toast{position:fixed;left:50%;bottom:26px;transform:translateX(-50%) translateY(8px);z-index:99;background:#14181a;border:1px solid rgba(46,230,168,.5);color:var(--ink);font-family:'JetBrains Mono',monospace;font-size:11.5px;padding:11px 18px;border-radius:999px;opacity:0;pointer-events:none;transition:all .25s}
+  #toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+  /* industry switcher + custom builder */
+  #indBar{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:14px}
+  .indLbl{font-family:'JetBrains Mono',monospace;font-size:9.5px;letter-spacing:.2em;color:var(--faint)}
+  #indRow{display:flex;gap:7px;flex-wrap:wrap}
+  .ichip{border:1px solid var(--line);background:var(--panel);color:var(--dim);font-family:'Archivo',sans-serif;font-size:12.5px;font-weight:700;padding:9px 15px;border-radius:999px;cursor:pointer}
+  .ichip.on{color:#04120c;background:var(--mint);border-color:var(--mint)}
+  #builder{background:var(--panel);border:1px solid rgba(46,230,168,.35);border-radius:18px;padding:20px;margin-bottom:16px}
+  #builder h3{font-size:13px;letter-spacing:.16em;font-weight:800;margin-bottom:4px}
+  #builder p{font-size:12px;color:var(--dim);margin-bottom:14px}
+  .bGrid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  @media(max-width:640px){ .bGrid{grid-template-columns:1fr} }
+  .bGrid input,.bGrid select{background:rgba(255,255,255,.06);border:1px solid var(--line);border-radius:11px;color:var(--ink);font-size:13.5px;padding:11px 13px;outline:none;font-family:'Archivo',sans-serif;width:100%}
+  .bSvc{display:grid;grid-template-columns:2fr 1fr 1fr;gap:10px;margin-top:10px}
+  .bSvc input{background:rgba(255,255,255,.06);border:1px solid var(--line);border-radius:11px;color:var(--ink);font-size:13.5px;padding:11px 13px;outline:none;font-family:'Archivo',sans-serif;width:100%}
+  .bHead{font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:.16em;color:var(--faint);margin-top:16px}
+  #bLaunch{margin-top:16px;width:100%}
+</style>
+</head>
+<body>
+
+<nav><div class="wrap">
+  <div class="logo">BOOK<em>D</em></div>
+  <div class="links"><a href="#demo">Live demo</a><a href="#how">How it works</a><a href="#pricing">Pricing</a><a href="#faq">FAQ</a></div>
+  <a class="cta" href="#claim">Get Kept</a>
+</div></nav>
+
+<section class="hero"><div class="wrap">
+  <div class="kicker">AI FRONT DESK · FOR ANY BUSINESS THAT RUNS ON BOOKINGS</div>
+  <h1>Your shop, <span class="u">booked</span><br>while you work.</h1>
+  <p>Every missed call is a customer who booked somewhere else. Kept answers every call and text in under a second — checks your calendar, books the appointment, sends the reminders — 24/7, while your hands stay on the client in the chair.</p>
+  <div class="ctas">
+    <a class="cta" href="#demo">Try the live demo ↓</a>
+    <a class="cta ghost" href="#pricing">See pricing</a>
+  </div>
+  <div class="stats">
+    <div class="stat"><b>24/7</b><span>ALWAYS ANSWERING</span></div>
+    <div class="stat"><b>&lt; 1 sec</b><span>ANSWER TIME</span></div>
+    <div class="stat"><b>$0</b><span>FRONT-DESK PAYROLL</span></div>
+    <div class="stat"><b>Same day</b><span>SETUP</span></div>
+  </div>
+</div></section>
+
+<section class="demoSec" id="demo"><div class="wrap">
+  <div class="secHead">
+    <h2>Don't take our word for it. <span style="color:var(--mint)">Book something.</span></h2>
+    <p>Left: you're a customer texting the business after hours. Right: what the owner sees. Switch industries — or build your own business — and watch the whole thing adapt.</p>
+  </div>
+  <div id="indBar">
+    <span class="indLbl">SEE IT AS:</span>
+    <div id="indRow">
+      <button class="ichip on" data-ind="barber">💈 Barbershop</button>
+      <button class="ichip" data-ind="law">⚖️ Law firm</button>
+      <button class="ichip" data-ind="photo">📸 Photography</button>
+      <button class="ichip" data-ind="tattoo">🎨 Tattoo &amp; art</button>
+      <button class="ichip" data-ind="detail">🚗 Detailing</button>
+      <button class="ichip" id="customChip">✚ Build your own</button>
+    </div>
+  </div>
+  <div id="builder" style="display:none">
+    <h3>BUILD YOUR OWN BUSINESS</h3>
+    <p>Name it, tell Kept what you sell, and the demo below becomes your business — your services, your prices, your words.</p>
+    <div class="bGrid">
+      <input id="bName" placeholder="Business name — e.g. Sunrise Yoga Studio" autocomplete="off">
+      <select id="bTerm">
+        <option value="appointment">We book: appointments</option>
+        <option value="consultation">We book: consultations</option>
+        <option value="session">We book: sessions</option>
+        <option value="visit">We book: visits</option>
+      </select>
+      <input id="bHours" placeholder="Hours — e.g. Mon–Fri, 9 AM to 5 PM" autocomplete="off">
+      <input id="bAddr" placeholder="Address — e.g. 500 Main St, Denver" autocomplete="off">
+    </div>
+    <div class="bHead">YOUR SERVICES · NAME / PRICE ($) / MINUTES</div>
+    <div class="bSvc"><input id="bs1n" placeholder="Service 1 — e.g. Private Session" autocomplete="off"><input id="bs1p" type="number" placeholder="60"><input id="bs1m" type="number" placeholder="60"></div>
+    <div class="bSvc"><input id="bs2n" placeholder="Service 2" autocomplete="off"><input id="bs2p" type="number" placeholder="Price"><input id="bs2m" type="number" placeholder="Mins"></div>
+    <div class="bSvc"><input id="bs3n" placeholder="Service 3" autocomplete="off"><input id="bs3p" type="number" placeholder="Price"><input id="bs3m" type="number" placeholder="Mins"></div>
+    <div class="bSvc"><input id="bs4n" placeholder="Service 4" autocomplete="off"><input id="bs4p" type="number" placeholder="Price"><input id="bs4m" type="number" placeholder="Mins"></div>
+    <button class="cta" id="bLaunch">Launch my demo ↓</button>
+  </div>
+  <div class="demoGrid">
+    <!-- customer phone -->
+    <div class="card">
+      <div class="cardHead"><b>💬 CUSTOMER · TEXTING THE BUSINESS</b><span id="bizNameTag">FADED &amp; CO. BARBERS</span></div>
+      <div class="phoneBody">
+        <div id="chatLog"></div>
+        <div id="chipRow"></div>
+        <div class="chatInput">
+          <input id="chatText" placeholder="Text the shop…" autocomplete="off">
+          <button id="chatSend">↑</button>
+        </div>
+      </div>
+    </div>
+    <!-- owner dashboard -->
+    <div class="card">
+      <div class="cardHead"><b><span class="liveDot"></span>OWNER DASHBOARD</b><span>LIVE FEED</span></div>
+      <div class="dashNums">
+        <div><b id="dCount">3</b><span>BOOKED TODAY</span></div>
+        <div><b id="dRev">$110</b><span>RECOVERED REVENUE</span></div>
+        <div><b id="dMiss">2</b><span>MISSED CALLS SAVED</span></div>
+      </div>
+      <div class="dashList" id="dashList"></div>
+      <div class="dashLog" id="dashLog"></div>
+    </div>
+  </div>
+</div></section>
+
+<section id="how"><div class="wrap">
+  <div class="secHead" style="margin-top:52px"><h2>How it works</h2></div>
+  <div class="steps">
+    <div class="step"><div class="n">STEP 01</div><h3>We plug into your number</h3><p>Keep your existing shop number — calls and texts route to Kept, or we set you up with a fresh one. Your services, prices and hours are loaded once. Done the same day.</p></div>
+    <div class="step"><div class="n">STEP 02</div><h3>Kept answers everything</h3><p>A customer calls at 9pm? Texts at lunch? Kept picks up instantly, answers questions about prices and hours, and books them straight into your calendar.</p></div>
+    <div class="step"><div class="n">STEP 03</div><h3>You watch the day fill up</h3><p>Confirmations and reminders go out automatically — no-shows drop, your chair stays full, and every booking lands in a dashboard you can check between clients.</p></div>
+  </div>
+</div></section>
+
+<section id="pricing"><div class="wrap">
+  <div class="secHead" style="margin-top:52px"><h2>Cheaper than one missed Saturday</h2><p>No contracts. Cancel anytime. Founding shops lock their rate for life.</p></div>
+  <div class="prices">
+    <div class="price">
+      <div class="tag">STARTER</div>
+      <div class="amt">$99<span>/mo</span></div>
+      <ul>
+        <li>Missed-call text-back, instant</li>
+        <li>AI booking by text message</li>
+        <li>Calendar sync + booking dashboard</li>
+        <li>Appointment confirmations</li>
+      </ul>
+    </div>
+    <div class="price hot">
+      <div class="tag">PRO · MOST SHOPS</div>
+      <div class="amt">$199<span>/mo</span></div>
+      <ul>
+        <li>Everything in Starter</li>
+        <li>AI voice answering — real phone calls</li>
+        <li>Reminders that cut no-shows</li>
+        <li>Deposits for new clients</li>
+        <li>After-hours &amp; weekend coverage</li>
+      </ul>
+    </div>
+  </div>
+</div></section>
+
+<section id="faq"><div class="wrap">
+  <div class="secHead" style="margin-top:52px"><h2>Straight answers</h2></div>
+  <div class="faq">
+    <div><b>Do I have to change my shop number?</b><p>No. We forward your existing number to Kept, or add Kept alongside it. Your cards, Google listing and regulars keep working exactly the same.</p></div>
+    <div><b>What if the AI can't answer something?</b><p>It doesn't guess. It takes a message, offers to book, and pings you instantly — the customer is never left hanging and you see every conversation in the dashboard.</p></div>
+    <div><b>What does it sound like on the phone?</b><p>Natural, short, and on-brand — it answers as your shop, with your services and your prices. Most customers just think you hired a sharp receptionist.</p></div>
+    <div><b>Is there a contract?</b><p>No. Month to month. If Kept isn't filling chairs, you shouldn't be paying for it.</p></div>
+  </div>
+</div></section>
+
+<section id="claim"><div class="wrap">
+  <div class="band">
+    <h2>First 10 Denver shops get set up free.</h2>
+    <p>We're onboarding a small founding group by hand — full setup, your services and calendar loaded, first month on us. When the 10 spots are gone, they're gone.</p>
+    <form id="claimForm">
+      <input id="cfShop" placeholder="Shop name" autocomplete="off">
+      <input id="cfPhone" placeholder="Your cell (for setup)" autocomplete="off">
+      <button class="cta" type="submit" style="padding:13px 24px">Claim my spot →</button>
+    </form>
+  </div>
+</div></section>
+
+<footer>
+  KEPT — the AI front desk for local shops · Denver, CO<br>
+  Demo site: the business above is fictional and the chat is a simulation of the live product.
+</footer>
+
+<div id="toast"></div>
+
+<script>
+'use strict';
+/* ============================================================
+   KEPT demo — a faithful simulation of the live product:
+   customer texts the shop → AI books → owner dashboard updates.
+   ============================================================ */
+const $ = id => document.getElementById(id);
+
+/* ---------- Business configurations ----------
+   Kept is built per-business: name, vocabulary, services,
+   prices, hours, address. Presets below; the builder in the
+   page can mint a brand-new one live.                        */
+const PRESETS = {
+  barber: {
+    name:'Faded & Co. Barbers', emoji:'💈', term:'appointment',
+    hours:'Mon–Sat, 9 AM to 7 PM. Closed Sundays.',
+    address:'2140 Blake St, Denver — free parking out back',
+    services:[
+      { name:'Haircut', price:35, mins:45 },
+      { name:'Skin Fade', price:40, mins:45 },
+      { name:'Beard Trim', price:20, mins:30 },
+      { name:'Cut + Beard', price:55, mins:75 }
+    ],
+    bookings:[
+      { time:'9:00 AM', name:'Marcus T.', svc:'Skin Fade', price:40, day:'Today' },
+      { time:'11:30 AM', name:'Dre W.', svc:'Haircut', price:35, day:'Today' },
+      { time:'2:00 PM', name:'Leo P.', svc:'Haircut', price:35, day:'Today' }
+    ]
+  },
+  law: {
+    name:'Harlan & Reyes Law', emoji:'⚖️', term:'consultation',
+    hours:'Mon–Fri, 8:30 AM to 5:30 PM.',
+    address:'1660 Lincoln St, Suite 1200, Denver',
+    services:[
+      { name:'Free Consultation', price:0, mins:30 },
+      { name:'Case Review', price:150, mins:60 },
+      { name:'Document Review', price:200, mins:45 },
+      { name:'Follow-Up Meeting', price:100, mins:30 }
+    ],
+    bookings:[
+      { time:'9:00 AM', name:'Alicia G.', svc:'Free Consultation', price:0, day:'Today' },
+      { time:'11:00 AM', name:'Robert M.', svc:'Case Review', price:150, day:'Today' },
+      { time:'1:30 PM', name:'Sandra K.', svc:'Document Review', price:200, day:'Today' }
+    ]
+  },
+  photo: {
+    name:'Lumen Studio Photography', emoji:'📸', term:'session',
+    hours:'Tue–Sat, 10 AM to 6 PM, plus event bookings anytime.',
+    address:'3120 Walnut St, Denver (RiNo)',
+    services:[
+      { name:'Portrait Session', price:150, mins:60 },
+      { name:'Family Shoot', price:250, mins:90 },
+      { name:'Product Shoot', price:300, mins:120 },
+      { name:'Event Coverage', price:600, mins:240 }
+    ],
+    bookings:[
+      { time:'10:00 AM', name:'The Nguyen Family', svc:'Family Shoot', price:250, day:'Today' },
+      { time:'12:30 PM', name:'Bloom Cosmetics', svc:'Product Shoot', price:300, day:'Today' },
+      { time:'3:00 PM', name:'Priya S.', svc:'Portrait Session', price:150, day:'Today' }
+    ]
+  },
+  tattoo: {
+    name:'Iron & Ink Tattoo', emoji:'🎨', term:'session',
+    hours:'Wed–Sun, 12 PM to 8 PM.',
+    address:'847 Broadway, Denver',
+    services:[
+      { name:'Free Consult', price:0, mins:30 },
+      { name:'Small Piece', price:120, mins:60 },
+      { name:'Half-Day Session', price:450, mins:240 },
+      { name:'Touch-Up', price:0, mins:30 }
+    ],
+    bookings:[
+      { time:'12:00 PM', name:'Jess M.', svc:'Small Piece', price:120, day:'Today' },
+      { time:'2:30 PM', name:'Andre B.', svc:'Half-Day Session', price:450, day:'Today' },
+      { time:'6:00 PM', name:'Kai R.', svc:'Free Consult', price:0, day:'Today' }
+    ]
+  },
+  detail: {
+    name:'Apex Auto Detailing', emoji:'🚗', term:'appointment',
+    hours:'Mon–Sat, 8 AM to 6 PM.',
+    address:'4550 Brighton Blvd, Denver — drop-off & mobile available',
+    services:[
+      { name:'Exterior Detail', price:120, mins:90 },
+      { name:'Full Detail', price:249, mins:180 },
+      { name:'Interior Deep Clean', price:149, mins:120 },
+      { name:'Ceramic Coating', price:899, mins:300 }
+    ],
+    bookings:[
+      { time:'8:00 AM', name:'Chris D. · F-150', svc:'Full Detail', price:249, day:'Today' },
+      { time:'11:00 AM', name:'Maya L. · Model 3', svc:'Ceramic Coating', price:899, day:'Today' },
+      { time:'2:00 PM', name:'Sam R. · Wrangler', svc:'Interior Deep Clean', price:149, day:'Today' }
+    ]
+  }
+};
+const DAYS = ['Today', 'Tomorrow', 'Saturday'];
+const SLOTS = ['9:00 AM','10:30 AM','12:00 PM','1:30 PM','3:00 PM','4:30 PM','6:00 PM'];
+const TAKEN = { 'Today':[1,4], 'Tomorrow':[0,3], 'Saturday':[2,5] };
+
+let BIZ = PRESETS.barber;
+let bookings = [];
+let missed = 2;
+let logLines = [];
+const state = { step:'idle', service:null, day:null, time:null };
+
+function resetDemo(cfgOrKey){
+  const cfg = typeof cfgOrKey === 'string' ? PRESETS[cfgOrKey] : cfgOrKey;
+  if(!cfg) return;
+  BIZ = cfg;
+  bookings = cfg.bookings.map(b=> ({ ...b }));
+  missed = 2;
+  logLines = [
+    { t:'8:02 PM', x:'Missed call → text-back sent in 3s' },
+    { t:'8:03 PM', x:'Text-back converted → booked ' + cfg.bookings[0].svc },
+    { t:'9:15 PM', x:'Reminder sent → ' + cfg.bookings[1].name }
+  ];
+  state.step = 'idle'; state.service = null; state.day = null; state.time = null;
+  $('bizNameTag').textContent = cfg.name.toUpperCase();
+  chatLog.innerHTML = '';
+  renderDash();
+  renderLog();
+  addMsg('sys', 'AFTER HOURS · CLOSED · KEPT IS ANSWERING');
+  aiSay('Hey, thanks for reaching out to ' + cfg.name + ' ' + cfg.emoji + ' We’re closed right now, but I can book a ' + cfg.term + ' for you, share prices, hours — whatever you need. What’s up?', ()=> mainMenu());
+}
+
+/* ---------- dashboard ---------- */
+function renderDash(freshIdx){
+  $('dashList').innerHTML = bookings.map((b, i)=>
+    '<div class="bk' + (freshIdx === i ? ' fresh' : '') + '"><span class="tm">' + b.time + '</span>' +
+    '<div class="who"><b></b><span>' + b.svc + ' · ' + b.day + '</span></div>' +
+    '<span class="pr">$' + b.price + '</span></div>').join('');
+  bookings.forEach((b, i)=>{
+    const el = $('dashList').children[i] && $('dashList').children[i].querySelector('b');
+    if(el) el.textContent = b.name;
+  });
+  $('dCount').textContent = bookings.length;
+  $('dRev').textContent = '$' + bookings.reduce((s, b)=> s + b.price, 0);
+  $('dMiss').textContent = missed;
+}
+function renderLog(){
+  $('dashLog').innerHTML = logLines.map(l=> '<div><span class="t">' + l.t + '</span> — ' + l.x + '</div>').join('');
+  $('dashLog').scrollTop = 1e6;
+}
+function addLog(x){
+  const t = new Date().toLocaleTimeString('en-US', { hour:'numeric', minute:'2-digit' });
+  logLines.push({ t, x });
+  renderLog();
+}
+
+/* ---------- chat ---------- */
+const chatLog = $('chatLog');
+function addMsg(cls, text){
+  const d = document.createElement('div');
+  d.className = 'msg ' + cls;
+  d.textContent = text;
+  chatLog.appendChild(d);
+  chatLog.scrollTop = chatLog.scrollHeight;
+  return d;
+}
+function aiSay(text, cb){
+  const t = addMsg('typing', '•••');
+  setTimeout(()=>{
+    t.remove();
+    addMsg('ai', text);
+    if(cb) cb();
+  }, 620 + Math.random() * 420);
+}
+function setChips(items){
+  const row = $('chipRow');
+  row.innerHTML = '';
+  items.forEach(it=>{
+    const b = document.createElement('button');
+    b.className = 'chip';
+    b.textContent = it.label;
+    b.addEventListener('click', ()=>{
+      row.querySelectorAll('button').forEach(x=> x.disabled = true);
+      addMsg('me', it.label);
+      it.onPick();
+    });
+    row.appendChild(b);
+  });
+}
+function clearChips(){ $('chipRow').innerHTML = ''; }
+
+function mainMenu(){
+  state.step = 'idle';
+  setChips([
+    { label:'Book a ' + BIZ.term, onPick:()=> askService() },
+    { label:'Prices', onPick:()=> showPrices() },
+    { label:'Hours', onPick:()=> showHours() },
+    { label:'Location', onPick:()=> showLocation() }
+  ]);
+}
+function showPrices(){
+  const list = BIZ.services.map(s=> s.name + (s.price ? ' $' + s.price : ' — free')).join(' · ');
+  aiSay('Here you go — ' + list + '. Want me to get you booked in?', ()=> setChips([
+    { label:'Book an appointment', onPick:()=> askService() },
+    { label:'Hours', onPick:()=> showHours() }
+  ]));
+}
+function showHours(){
+  aiSay('Our hours are ' + BIZ.hours + ' Kept (that’s me) answers 24/7 though — want to grab a ' + BIZ.term + '?', ()=> setChips([
+    { label:'Book an appointment', onPick:()=> askService() },
+    { label:'Prices', onPick:()=> showPrices() }
+  ]));
+}
+function showLocation(){
+  aiSay('You’ll find us at ' + BIZ.address + '. Want me to book you in?', ()=> setChips([
+    { label:'Book an appointment', onPick:()=> askService() }
+  ]));
+}
+function askService(){
+  state.step = 'service';
+  aiSay('Bet. What are we doing for you?', ()=> setChips(
+    BIZ.services.map(s=> ({ label: s.name + (s.price ? ' · $' + s.price : ' · Free'), onPick:()=> pickService(s) }))
+  ));
+}
+function pickService(s){
+  state.service = s;
+  state.step = 'day';
+  aiSay(s.name + ' — ' + s.mins + ' minutes, ' + (s.price ? '$' + s.price : 'free') + '. What day works?', ()=> setChips(
+    DAYS.map(d=> ({ label: d, onPick:()=> pickDay(d) }))
+  ));
+}
+function freeSlots(day){
+  return SLOTS.filter((_, i)=> !(TAKEN[day] || []).includes(i));
+}
+function pickDay(d){
+  state.day = d;
+  state.step = 'time';
+  const free = freeSlots(d);
+  aiSay(d + ' — I have ' + free.length + ' openings. Pick a time:', ()=> setChips(
+    free.map(t=> ({ label: t, onPick:()=> pickTime(t) }))
+  ));
+}
+function pickTime(t){
+  state.time = t;
+  state.step = 'name';
+  clearChips();
+  aiSay('Locked in — ' + state.service.name + ', ' + state.day + ' at ' + t + '. Last thing: what name should I put on the booking?');
+}
+function confirmBooking(name){
+  const s = state.service;
+  const b = { time: state.time, name, svc: s.name, price: s.price, day: state.day };
+  bookings.push(b);
+  renderDash(bookings.length - 1);
+  addLog('New booking → ' + name + ', ' + s.name + ' (' + state.day + ' ' + state.time + ') · +$' + s.price);
+  state.step = 'idle';
+  aiSay('You’re booked, ' + name.split(' ')[0] + ' ✓ ' + s.name + ' — ' + state.day + ' at ' + state.time + '. A confirmation text is on its way, and we’ll remind you before. Anything else?', ()=> setChips([
+    { label:'Book another', onPick:()=> askService() },
+    { label:'That’s all', onPick:()=> aiSay('Sounds good — see you soon. ✌️', ()=> mainMenu()) }
+  ]));
+}
+
+/* ---------- free-text understanding ---------- */
+function matchService(txt){
+  /* generic word-stem match against whatever services this business offers */
+  const words = txt.split(/[^a-z]+/).filter(w=> w.length >= 4);
+  for(const s of BIZ.services){
+    const sw = s.name.toLowerCase().split(/[^a-z]+/).filter(w=> w.length >= 3);
+    for(const w of words){
+      for(const x of sw){
+        if(w.startsWith(x.slice(0, 5)) || x.startsWith(w.slice(0, 5))) return s;
+      }
+    }
+  }
+  return null;
+}
+function handleText(raw){
+  const txt = raw.toLowerCase().trim();
+  if(!txt) return;
+  if(state.step === 'name'){
+    if(txt.includes('?')){ aiSay('Good question — the owner will see it in the dashboard. For the booking, what name should I use?', ()=>{}); return; }
+    const name = raw.trim().replace(/\s+/g, ' ').slice(0, 26)
+      .replace(/\b\w/g, c=> c.toUpperCase());
+    confirmBooking(name || 'Guest');
+    return;
+  }
+  if(state.step === 'time'){
+    const m = txt.match(/(\d{1,2})(?::(\d{2}))?\s*(am|pm)?/);
+    if(m){
+      let h = +m[1];
+      const ap = m[3] || (h < 9 ? 'pm' : 'am');
+      if(ap === 'pm' && h < 12) h += 12;
+      if(ap === 'am' && h === 12) h = 0;
+      const hit = freeSlots(state.day).find(s=>{
+        const sm = s.match(/(\d{1,2}):(\d{2}) (AM|PM)/);
+        let sh = +sm[1];
+        if(sm[3] === 'PM' && sh < 12) sh += 12;
+        return sh === h && (!m[2] || +m[2] === +sm[2]);
+      });
+      if(hit){ pickTime(hit); return; }
+    }
+    aiSay('That one’s taken or outside hours — here’s what’s open:', ()=> setChips(
+      freeSlots(state.day).map(t=> ({ label: t, onPick:()=> pickTime(t) }))
+    ));
+    return;
+  }
+  if(state.step === 'day'){
+    const d = DAYS.find(x=> txt.includes(x.toLowerCase()));
+    if(d){ pickDay(d); return; }
+  }
+  if(state.step === 'service'){
+    const s = matchService(txt);
+    if(s){ pickService(s); return; }
+  }
+  /* general intents, any time */
+  if(/price|cost|much|charge/.test(txt)) return showPrices();
+  if(/hour|open|close|when/.test(txt)) return showHours();
+  if(/where|location|address|directions|park/.test(txt)) return showLocation();
+  if(/human|person|owner|real|someone|call me/.test(txt)){
+    addLog('Customer asked for the owner → owner pinged by text');
+    aiSay('No problem — I’ve pinged the owner and they’ll get back to you here. In the meantime I can book you in about 20 seconds if you want.', ()=> mainMenu());
+    return;
+  }
+  if(/cancel|nevermind|forget/.test(txt)){
+    aiSay('All good — nothing booked. Want anything else?', ()=> mainMenu());
+    return;
+  }
+  if(/book|appointment|consult|session|slot|schedule|visit|shoot|detail|reserve/.test(txt)){
+    const s = matchService(txt);
+    if(s){ pickService(s); return; }
+    return askService();
+  }
+  if(/^(hi|hey|hello|yo|sup)\b/.test(txt)){
+    aiSay('Hey! Welcome to Faded & Co. Want to book, or just checking prices?', ()=> mainMenu());
+    return;
+  }
+  if(/thank|thanks|thx/.test(txt)){
+    aiSay('Anytime. ✌️', ()=> mainMenu());
+    return;
+  }
+  aiSay('I can help with booking, prices, hours and directions — or tap one of these:', ()=> mainMenu());
+}
+$('chatSend').addEventListener('click', sendChat);
+$('chatText').addEventListener('keydown', e=>{ if(e.key === 'Enter') sendChat(); });
+function sendChat(){
+  const v = $('chatText').value;
+  if(!v.trim()) return;
+  $('chatText').value = '';
+  clearChips();
+  addMsg('me', v);
+  handleText(v);
+}
+
+/* ---------- claim form + toast ---------- */
+let toastT = null;
+function toast(msg){
+  const t = $('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(toastT);
+  toastT = setTimeout(()=> t.classList.remove('show'), 2600);
+}
+$('claimForm').addEventListener('submit', e=>{
+  e.preventDefault();
+  const shop = $('cfShop').value.trim();
+  if(!shop){ toast('Add your shop name first'); return; }
+  $('cfShop').value = ''; $('cfPhone').value = '';
+  toast('Spot claimed for ' + shop + ' — setup text on its way (demo)');
+});
+
+/* ---------- industry switcher + custom builder ---------- */
+document.querySelectorAll('#indRow [data-ind]').forEach(ch=>{
+  ch.addEventListener('click', ()=>{
+    document.querySelectorAll('#indRow .ichip').forEach(x=> x.classList.remove('on'));
+    ch.classList.add('on');
+    $('builder').style.display = 'none';
+    resetDemo(ch.dataset.ind);
+  });
+});
+$('customChip').addEventListener('click', ()=>{
+  const b = $('builder');
+  b.style.display = b.style.display === 'none' ? 'block' : 'none';
+});
+$('bLaunch').addEventListener('click', ()=>{
+  const services = [];
+  for(let i = 1; i <= 4; i++){
+    const n = $('bs' + i + 'n').value.trim();
+    if(!n) continue;
+    services.push({ name: n, price: Math.max(0, +$('bs' + i + 'p').value || 0), mins: Math.max(5, +$('bs' + i + 'm').value || 60) });
+  }
+  if(!services.length) services.push({ name:'Standard Service', price:50, mins:60 });
+  const second = services[Math.min(1, services.length - 1)];
+  const cfg = {
+    name: $('bName').value.trim() || 'Your Business',
+    emoji:'🏢', term: $('bTerm').value,
+    hours: $('bHours').value.trim() || 'Mon–Sat, 9 AM to 6 PM.',
+    address: $('bAddr').value.trim() || 'Denver, CO',
+    services,
+    bookings: [
+      { time:'9:00 AM', name:'First Client', svc: services[0].name, price: services[0].price, day:'Today' },
+      { time:'11:30 AM', name:'Second Client', svc: second.name, price: second.price, day:'Today' }
+    ]
+  };
+  document.querySelectorAll('#indRow .ichip').forEach(x=> x.classList.remove('on'));
+  $('customChip').classList.add('on');
+  $('builder').style.display = 'none';
+  resetDemo(cfg);
+  toast('Demo rebuilt as ' + cfg.name);
+  document.getElementById('demo').scrollIntoView({ behavior:'smooth' });
+});
+
+/* ---------- boot ---------- */
+resetDemo('barber');
+
+/* a "missed call" lands while you watch — Kept catches those too */
+setTimeout(()=>{
+  missed++;
+  renderDash();
+  addLog('Missed call from (720) •••-9032 → text-back sent in 2s');
+}, 26000);
+</script>
+</body>
+</html>

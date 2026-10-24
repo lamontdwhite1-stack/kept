@@ -141,13 +141,13 @@
 <body>
 
 <nav><div class="wrap">
-  <div class="logo">BOOK<em>D</em></div>
+  <div class="logo">KEP<em>T</em></div>
   <div class="links"><a href="#demo">Live demo</a><a href="#how">How it works</a><a href="#pricing">Pricing</a><a href="#faq">FAQ</a></div>
   <a class="cta" href="#claim">Get Kept</a>
 </div></nav>
 
 <section class="hero"><div class="wrap">
-  <div class="kicker">AI FRONT DESK · FOR ANY BUSINESS THAT RUNS ON BOOKINGS</div>
+  <div class="kicker">AI FRONT DESK · FOR ANY BUSINESS THAT TAKES CALLS</div>
   <h1>Your shop, <span class="u">booked</span><br>while you work.</h1>
   <p>Every missed call is a customer who booked somewhere else. Kept answers every call and text in under a second — checks your calendar, books the appointment, sends the reminders — 24/7, while your hands stay on the client in the chair.</p>
   <div class="ctas">
@@ -175,6 +175,7 @@
       <button class="ichip" data-ind="photo">📸 Photography</button>
       <button class="ichip" data-ind="tattoo">🎨 Tattoo &amp; art</button>
       <button class="ichip" data-ind="detail">🚗 Detailing</button>
+      <button class="ichip" data-ind="restaurant">🍽️ Restaurant</button>
       <button class="ichip" id="customChip">✚ Build your own</button>
     </div>
   </div>
@@ -188,6 +189,7 @@
         <option value="consultation">We book: consultations</option>
         <option value="session">We book: sessions</option>
         <option value="visit">We book: visits</option>
+        <option value="reservation">We book: reservations</option>
       </select>
       <input id="bHours" placeholder="Hours — e.g. Mon–Fri, 9 AM to 5 PM" autocomplete="off">
       <input id="bAddr" placeholder="Address — e.g. 500 Main St, Denver" autocomplete="off">
@@ -274,7 +276,7 @@
 
 <section id="claim"><div class="wrap">
   <div class="band">
-    <h2>First 10 Denver shops get set up free.</h2>
+    <h2>First 10 Denver businesses get set up free.</h2>
     <p>We're onboarding a small founding group by hand — full setup, your services and calendar loaded, first month on us. When the 10 spots are gone, they're gone.</p>
     <form id="claimForm">
       <input id="cfShop" placeholder="Shop name" autocomplete="off">
@@ -285,7 +287,7 @@
 </div></section>
 
 <footer>
-  KEPT — the AI front desk for local shops · Denver, CO<br>
+  KEPT — the AI front desk for local businesses · Denver, CO<br>
   Demo site: the business above is fictional and the chat is a simulation of the live product.
 </footer>
 
@@ -383,6 +385,28 @@ const PRESETS = {
       { time:'11:00 AM', name:'Maya L. · Model 3', svc:'Ceramic Coating', price:899, day:'Today' },
       { time:'2:00 PM', name:'Sam R. · Wrangler', svc:'Interior Deep Clean', price:149, day:'Today' }
     ]
+  },
+  restaurant: {
+    name:'Ember & Oak', emoji:'🍽️', term:'reservation', kind:'restaurant',
+    hours:'Tue–Sun, 11 AM to 10 PM. Kitchen closes 9:30 PM.',
+    address:'2501 Larimer St, Denver (RiNo)',
+    services:[],
+    menu:[
+      { name:'Smoked Brisket Plate', price:24 },
+      { name:'Charred Salmon', price:28 },
+      { name:'Truffle Burger', price:19 },
+      { name:'Roasted Veg Bowl', price:16 }
+    ],
+    catering:[
+      { name:'Taco Bar', price:22, min:20 },
+      { name:'BBQ Buffet', price:35, min:25 },
+      { name:'Plated Dinner', price:65, min:40 }
+    ],
+    bookings:[
+      { time:'6:00 PM', name:'Party of 4 · Nguyen', svc:'Table Reservation', price:0, day:'Today' },
+      { time:'7:30 PM', name:'Party of 2 · Alvarez', svc:'Table Reservation', price:0, day:'Today' },
+      { time:'4:00 PM', name:'Denver Tech Meetup', svc:'Catering · 40 guests', price:1400, day:'Saturday' }
+    ]
   }
 };
 const DAYS = ['Today', 'Tomorrow', 'Saturday'];
@@ -393,7 +417,7 @@ let BIZ = PRESETS.barber;
 let bookings = [];
 let missed = 2;
 let logLines = [];
-const state = { step:'idle', service:null, day:null, time:null };
+const state = { step:'idle', service:null, day:null, time:null, kind:null, party:null, guests:null, pkg:null };
 
 function resetDemo(cfgOrKey){
   const cfg = typeof cfgOrKey === 'string' ? PRESETS[cfgOrKey] : cfgOrKey;
@@ -407,6 +431,7 @@ function resetDemo(cfgOrKey){
     { t:'9:15 PM', x:'Reminder sent → ' + cfg.bookings[1].name }
   ];
   state.step = 'idle'; state.service = null; state.day = null; state.time = null;
+  state.kind = null; state.party = null; state.guests = null; state.pkg = null;
   $('bizNameTag').textContent = cfg.name.toUpperCase();
   chatLog.innerHTML = '';
   renderDash();
@@ -476,6 +501,17 @@ function clearChips(){ $('chipRow').innerHTML = ''; }
 
 function mainMenu(){
   state.step = 'idle';
+  if(BIZ.kind === 'restaurant'){
+    setChips([
+      { label:'Book a table', onPick:()=> askParty() },
+      { label:'Order takeout', onPick:()=> askMenuItem() },
+      { label:'Catering', onPick:()=> askGuests() },
+      { label:'Menu', onPick:()=> showMenu() },
+      { label:'Hours', onPick:()=> showHours() },
+      { label:'Location', onPick:()=> showLocation() }
+    ]);
+    return;
+  }
   setChips([
     { label:'Book a ' + BIZ.term, onPick:()=> askService() },
     { label:'Prices', onPick:()=> showPrices() },
@@ -484,21 +520,22 @@ function mainMenu(){
   ]);
 }
 function showPrices(){
+  if(BIZ.kind === 'restaurant') return showMenu();
   const list = BIZ.services.map(s=> s.name + (s.price ? ' $' + s.price : ' — free')).join(' · ');
   aiSay('Here you go — ' + list + '. Want me to get you booked in?', ()=> setChips([
-    { label:'Book an appointment', onPick:()=> askService() },
+    { label:'Book a ' + BIZ.term, onPick:()=> askService() },
     { label:'Hours', onPick:()=> showHours() }
   ]));
 }
 function showHours(){
   aiSay('Our hours are ' + BIZ.hours + ' Kept (that’s me) answers 24/7 though — want to grab a ' + BIZ.term + '?', ()=> setChips([
-    { label:'Book an appointment', onPick:()=> askService() },
+    { label:'Book a ' + BIZ.term, onPick:()=> askService() },
     { label:'Prices', onPick:()=> showPrices() }
   ]));
 }
 function showLocation(){
   aiSay('You’ll find us at ' + BIZ.address + '. Want me to book you in?', ()=> setChips([
-    { label:'Book an appointment', onPick:()=> askService() }
+    { label:'Book a ' + BIZ.term, onPick:()=> askService() }
   ]));
 }
 function askService(){
@@ -536,11 +573,90 @@ function confirmBooking(name){
   const b = { time: state.time, name, svc: s.name, price: s.price, day: state.day };
   bookings.push(b);
   renderDash(bookings.length - 1);
-  addLog('New booking → ' + name + ', ' + s.name + ' (' + state.day + ' ' + state.time + ') · +$' + s.price);
+  let msg, log;
+  if(state.kind === 'catering'){
+    const dep = Math.round(s.price * 0.25);
+    msg = 'You’re on the books, ' + name.split(' ')[0] + ' ✓ ' + s.name + ' — ' + state.day + ' at ' + state.time + '. Estimated total $' + s.price + ', with a $' + dep + ' deposit to hold the date. The owner confirms the final menu and sends your confirmation text. Anything else?';
+    log = 'Catering hold → ' + name + ', ' + s.name + ' (' + state.day + ' ' + state.time + ') · est $' + s.price + ' · deposit $' + dep;
+  } else if(state.kind === 'order'){
+    msg = 'Order’s in, ' + name.split(' ')[0] + ' ✓ ' + s.name + ' — pickup ' + state.day + ' at ' + state.time + '. We’ll text you when it’s ready. Anything else?';
+    log = 'Takeout order → ' + name + ', ' + s.name + ' (' + state.day + ' ' + state.time + ') · +$' + s.price;
+  } else if(state.kind === 'table'){
+    msg = 'Table’s yours, ' + name.split(' ')[0] + ' ✓ ' + s.name + ' — ' + state.day + ' at ' + state.time + '. A confirmation text is on its way. Anything else?';
+    log = 'New reservation → ' + name + ', ' + s.name + ' (' + state.day + ' ' + state.time + ')';
+  } else {
+    msg = 'You’re booked, ' + name.split(' ')[0] + ' ✓ ' + s.name + ' — ' + state.day + ' at ' + state.time + '. A confirmation text is on its way, and we’ll remind you before. Anything else?';
+    log = 'New booking → ' + name + ', ' + s.name + ' (' + state.day + ' ' + state.time + ') · +$' + s.price;
+  }
+  addLog(log);
   state.step = 'idle';
-  aiSay('You’re booked, ' + name.split(' ')[0] + ' ✓ ' + s.name + ' — ' + state.day + ' at ' + state.time + '. A confirmation text is on its way, and we’ll remind you before. Anything else?', ()=> setChips([
-    { label:'Book another', onPick:()=> askService() },
+  aiSay(msg, ()=> setChips([
+    { label:'Book another', onPick:()=> BIZ.kind === 'restaurant' ? mainMenu() : askService() },
     { label:'That’s all', onPick:()=> aiSay('Sounds good — see you soon. ✌️', ()=> mainMenu()) }
+  ]));
+}
+
+/* ---------- restaurant flows: tables, takeout, catering ---------- */
+function askParty(){
+  state.step = 'party';
+  aiSay('Love it — how many in your party?', ()=> setChips(
+    ['2','4','6','8+'].map(n=> ({ label: n + ' people', onPick:()=> pickParty(n) }))
+  ));
+}
+function pickParty(n){
+  state.party = n;
+  state.kind = 'table';
+  state.service = { name:'Table · party of ' + n, price:0, mins:90 };
+  aiSay('Table for ' + n + ' — what day?', ()=> setChips(
+    DAYS.map(d=> ({ label: d, onPick:()=> pickDay(d) }))
+  ));
+}
+function askMenuItem(){
+  state.step = 'menu';
+  aiSay('What are we craving?', ()=> setChips(
+    BIZ.menu.map(m=> ({ label: m.name + ' · $' + m.price, onPick:()=> pickMenuItem(m) }))
+  ));
+}
+function pickMenuItem(m){
+  state.kind = 'order';
+  state.service = { name: m.name, price: m.price, mins: 0 };
+  aiSay(m.name + ' — $' + m.price + '. What day for pickup?', ()=> setChips(
+    DAYS.map(d=> ({ label: d, onPick:()=> pickDay(d) }))
+  ));
+}
+function askGuests(){
+  state.step = 'guests';
+  aiSay('Catering — nice. How many guests are we feeding?', ()=> setChips(
+    [10, 25, 40, 75].map(n=> ({ label: (n === 75 ? '75+' : n) + ' guests', onPick:()=> pickGuests(n) }))
+  ));
+}
+function pickGuests(n){
+  state.guests = n;
+  aiSay(n + ' guests — which package?', ()=> setChips(
+    BIZ.catering.map(p=> ({ label: p.name + ' · $' + p.price + '/person', onPick:()=> pickPackage(p) }))
+  ));
+}
+function pickPackage(p){
+  state.pkg = p;
+  let note = '';
+  if(state.guests < p.min){
+    state.guests = p.min;
+    note = ' That package has a ' + p.min + '-guest minimum, so I’ve put you down for ' + p.min + '.';
+  }
+  const total = state.guests * p.price;
+  state.kind = 'catering';
+  state.service = { name:'Catering · ' + state.guests + ' guests · ' + p.name, price: total, mins: 0 };
+  aiSay(p.name + ' at $' + p.price + ' a head for ' + state.guests + ' guests comes to about $' + total + '.' + note + ' A 25% deposit holds the date. What day’s the event?', ()=> setChips(
+    DAYS.map(d=> ({ label: d, onPick:()=> pickDay(d) }))
+  ));
+}
+function showMenu(){
+  const food = BIZ.menu.map(m=> m.name + ' $' + m.price).join(' · ');
+  const cat = BIZ.catering.map(p=> p.name + ' $' + p.price + '/person').join(' · ');
+  aiSay('From the kitchen — ' + food + '. And catering packages: ' + cat + '. Want to order, or plan an event?', ()=> setChips([
+    { label:'Order takeout', onPick:()=> askMenuItem() },
+    { label:'Catering', onPick:()=> askGuests() },
+    { label:'Book a table', onPick:()=> askParty() }
   ]));
 }
 
@@ -596,6 +712,13 @@ function handleText(raw){
     const s = matchService(txt);
     if(s){ pickService(s); return; }
   }
+  /* restaurant intents */
+  if(BIZ.kind === 'restaurant'){
+    if(/cater/.test(txt)) return askGuests();
+    if(/takeout|take out|takeaway|pickup|pick up|delivery/.test(txt)) return askMenuItem();
+    if(/table|reserv/.test(txt)) return askParty();
+    if(/menu/.test(txt)) return showMenu();
+  }
   /* general intents, any time */
   if(/price|cost|much|charge/.test(txt)) return showPrices();
   if(/hour|open|close|when/.test(txt)) return showHours();
@@ -610,12 +733,13 @@ function handleText(raw){
     return;
   }
   if(/book|appointment|consult|session|slot|schedule|visit|shoot|detail|reserve/.test(txt)){
+    if(BIZ.kind === 'restaurant') return askParty();
     const s = matchService(txt);
     if(s){ pickService(s); return; }
     return askService();
   }
   if(/^(hi|hey|hello|yo|sup)\b/.test(txt)){
-    aiSay('Hey! Welcome to Faded & Co. Want to book, or just checking prices?', ()=> mainMenu());
+    aiSay('Hey! Welcome to ' + BIZ.name + '. Want to book, or just checking prices?', ()=> mainMenu());
     return;
   }
   if(/thank|thanks|thx/.test(txt)){
